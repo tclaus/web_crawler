@@ -44,7 +44,6 @@ impl fmt::Display for UrlState {
 
 fn build_url(domain: &str, path: &str) ->  Result<Url, ParseError> {
     let base_url = Url::parse(&domain)?;
-    println!("Build_url: {}", base_url);
     base_url.join(path)
 }
 
@@ -52,7 +51,7 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
    println!("Fetch URL Domain, path: {},{}",domain, path);
 
     // Ignore known invalid links
-    if path.starts_with("mailto") {
+    if !is_valid_path(path) {
         UrlState::InvalidLink(path.to_owned());
     }
 
@@ -93,6 +92,23 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
             } ,
     }
 }
+
+fn is_valid_path(path : &str) -> bool {
+
+    if path.starts_with("mailto") {
+        println!("Ignoring mailto: {}", path);
+       return false
+    }
+
+    if path.starts_with("http") {
+        println!("Ignoring external link. {} Adding to list", path);
+        // TODO: adding to list of urls to crawl - if not on ignore list
+        return false
+    }
+
+    return true
+}
+
 
 pub fn fetch_url(url: &Url) -> String {
     let ssl = NativeTlsClient::new().unwrap();

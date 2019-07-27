@@ -67,7 +67,7 @@ fn crawl_worker_thread(
             // Dont visit already visited urls
             let mut visited_val = visited.lock().unwrap();
             if visited_val.contains(&current) {
-                println!("Ignoring {}", &current);
+                // println!("Already visited {}", &current);
                 let mut active_count_val = active_count.lock().unwrap();
                 *active_count_val -= 1;
                 continue;
