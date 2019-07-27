@@ -26,6 +26,7 @@ pub enum UrlState {
     ConnectionFailed(Url),
     TimedOut(Url),
     Malformed(String),
+    InvalidLink(String),
 }
 
 impl fmt::Display for UrlState {
@@ -36,6 +37,7 @@ impl fmt::Display for UrlState {
             UrlState::ConnectionFailed(ref url) => format!("x {} (connection failed)", url).fmt(f),
             UrlState::TimedOut(ref url) => format!("x {} (timed out)", url).fmt(f),
             UrlState::Malformed(ref url) => format!("x {} (malformed)", url).fmt(f),
+            UrlState::InvalidLink(ref url) => format!("x {} (invalid link)", url).fmt(f),
         }
     }
 }
@@ -48,6 +50,11 @@ fn build_url(domain: &str, path: &str) ->  Result<Url, ParseError> {
 
 pub fn url_status(domain: &str, path: &str) -> UrlState {
    println!("Fetch URL Domain, path: {},{}",domain, path);
+
+    // Ignore known invalid links
+    if path.starts_with("mailto") {
+        UrlState::InvalidLink(path.to_owned());
+    }
 
     match build_url(domain, path) {
         Ok(url) => {
@@ -82,15 +89,13 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
         }
         Err(_) => {
             println!("ERROR");
-            UrlState::Malformed(path.to_owned())
-            }
-            ,
+                UrlState::Malformed(path.to_owned())
+            } ,
     }
 }
 
 pub fn fetch_url(url: &Url) -> String {
     let client = Client::new();
-    println!("Fetched_url: {}",url);
 
     let url_string = url.to_string();
     let mut res = client
@@ -98,8 +103,6 @@ pub fn fetch_url(url: &Url) -> String {
         .send()
         .ok()
         .expect("could not fetch URL");
-    
-    println!("Fetched_url: {}",url_string);
 
     let mut body = String::new();
     // TODO: Here parse body for indexing 

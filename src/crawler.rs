@@ -58,15 +58,16 @@ fn crawl_worker_thread(
                 }
             };
             current = to_visit_val.pop().unwrap();
-            println!(" To visit: {}",current);
 
             *active_count_val += 1;
             assert!(*active_count_val <= THREADS);
         }
 
         {
+            // Dont visit already visited urls
             let mut visited_val = visited.lock().unwrap();
             if visited_val.contains(&current) {
+                println!("Ignoring {}", &current);
                 let mut active_count_val = active_count.lock().unwrap();
                 *active_count_val -= 1;
                 continue;
@@ -76,12 +77,9 @@ fn crawl_worker_thread(
         }
 
         let state = url_status(&origin, &current);
-        println!(" Current state: {}", state);
         if let UrlState::Accessible(ref url) = state.clone() {
             if url.origin().ascii_serialization().eq_ignore_ascii_case(&origin) {
                 let new_urls = fetch_all_urls(&url);
-                println!("New URLs: {:?}", new_urls);
-
                 let mut to_visit_val = to_visit.lock().unwrap();
                 for new_url in new_urls {
                     to_visit_val.push(new_url);
