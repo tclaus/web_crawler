@@ -95,15 +95,17 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
 }
 
 pub fn fetch_url(url: &Url) -> String {
-    let client = Client::new();
+    let ssl = NativeTlsClient::new().unwrap();
+    let connector = HttpsConnector::new(ssl);
+    let client = Client::with_connector(connector);
 
     let url_string = url.to_string();
     let mut res = client
         .get(&url_string)
         .send()
         .ok()
-        .expect("could not fetch URL");
-
+        .expect("Unknown url");
+    
     let mut body = String::new();
     // TODO: Here parse body for indexing 
     match res.read_to_string(&mut body) {
