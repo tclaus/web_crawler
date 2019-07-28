@@ -1,3 +1,4 @@
+mod link_checker;
 
 pub mod parse;
 pub mod fetch;

@@ -80,10 +80,13 @@ fn crawl_worker_thread(
         if let UrlState::Accessible(ref url) = state.clone() {
             if url.origin().ascii_serialization().eq_ignore_ascii_case(&origin) {
                 let new_urls = fetch_all_urls(&url);
+                println!(" Found target links: {:?}", new_urls);
                 let mut to_visit_val = to_visit.lock().unwrap();
                 for new_url in new_urls {
                     to_visit_val.push(new_url);
                 }
+            } else {
+                println!(" Found no links");
             }
         }
 
@@ -102,7 +105,7 @@ pub fn crawl_start_url(start_url_string :&str) {
         let start_url = Url::parse(start_url_string).unwrap();
         
         let origin = start_url.origin();
-        println!("Origin URL {}", origin.ascii_serialization());
+        println!(" Origin URL {}", origin.ascii_serialization());
 
             
         // TODO: Step1: loop through read urls from database

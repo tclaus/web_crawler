@@ -15,6 +15,7 @@ use self::hyper::status::StatusCode;
 use url::{Url, ParseError};
 
 use super::parse;
+use super::link_checker;
 
 const TIMEOUT: u64 = 10;
 
@@ -50,7 +51,7 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
    println!("Fetch URL Domain, path: {},{}",domain, path);
 
     // Ignore known invalid links
-    if !is_valid_path(path) {
+    if !is_valid_path(domain, path) {
         UrlState::InvalidLink(path.to_owned());
     }
 
@@ -92,23 +93,25 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
     }
 }
 
-fn is_valid_path(path : &str) -> bool {
-    // TODO: ignore Tel,FTP, USW.. 
-    if path.starts_with("mailto") {
-        println!("Ignoring mailto: {}", path);
-       return false
+fn is_valid_path(domain: &str, path: &str) -> bool {
+    
+    if path.starts_with("https://") || path.starts_with("http://") {
+       
+        let is_same = link_checker::url_has_same_origin_path(domain, path);
+        if is_same {
+            // Follow link - it's on the same domain
+                println!(" OK - follow link");
+            return true
+        } else {
+            // TODO: add it on the urls list (if not on the ignore list) 
+            println!(" Not OK - follow link");
+            return false
+        }
     }
-
-    if path.starts_with("tel") {
-        println!("Ignoring mailto: {}", path);
+    
+    if path.starts_with("tel:") || path.starts_with("ftp:") || path.starts_with("mailto:") {
+        println!("Ignoring reference other than http: {}", path);
        return false
-    }
-
-    if path.starts_with("http") {
-        println!("Ignoring external link. {} Adding to list", path);
-        // TODO: Check if link points to the same domain, normalize it and extract baseUrl (origin)
-        // TODO: adding to list of urls to crawl - if not on ignore list
-        return false
     }
 
     return true
