@@ -14,8 +14,7 @@ use hyper_native_tls::NativeTlsClient;
 use self::hyper::status::StatusCode;
 use url::{Url, ParseError};
 
-
-use crate::parse;
+use super::parse;
 
 const TIMEOUT: u64 = 10;
 
@@ -94,21 +93,26 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
 }
 
 fn is_valid_path(path : &str) -> bool {
-
+    // TODO: ignore Tel,FTP, USW.. 
     if path.starts_with("mailto") {
+        println!("Ignoring mailto: {}", path);
+       return false
+    }
+
+    if path.starts_with("tel") {
         println!("Ignoring mailto: {}", path);
        return false
     }
 
     if path.starts_with("http") {
         println!("Ignoring external link. {} Adding to list", path);
+        // TODO: Check if link points to the same domain, normalize it and extract baseUrl (origin)
         // TODO: adding to list of urls to crawl - if not on ignore list
         return false
     }
 
     return true
 }
-
 
 pub fn fetch_url(url: &Url) -> String {
     let ssl = NativeTlsClient::new().unwrap();

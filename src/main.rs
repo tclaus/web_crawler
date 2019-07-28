@@ -4,39 +4,34 @@ extern crate url;
 use std::env;
 use std::io::stdout;
 use std::io::Write;
-use url::Url;
 
-use fetch::UrlState;
+mod web_crawler;
+use web_crawler::{crawler};
 
-mod crawler;
-mod fetch;
-mod parse;
+mod metadata;
+use metadata::{read_urls_to_scan};
 
 fn main() {
     let args: Vec<_> = env::args().collect();
     println!("Starting crawler...");
+    
     if args.len() > 1 {
+         println!("Scan urls from commandline");
         let start_url_string = &args[1];
-        let start_url = Url::parse(start_url_string).unwrap();
-        println!(" Start parsing {}", start_url);
-        let origin = start_url
-                .origin();
-        println!("Origin URL {}", origin.ascii_serialization());
+        println!(" Start parsing {}", start_url_string);
+        crawler::crawl_start_url(&start_url_string);
 
-        let mut success_count = 0;
-        let mut fail_count = 0;
-        for url_state in crawler::crawl(&origin.ascii_serialization(), &start_url) {
-            match url_state {
-                UrlState::Accessible(_) => {
-                    success_count += 1;
-                }
-                status => {
-                    fail_count += 1;
-                    println!("{}", status);
-                }
-            }
-            println!("Succeeded: {}, Failed: {}\r", success_count, fail_count);
-            stdout().flush().unwrap();
+    } else {
+        println!("Scan urls from database");
+        let urls = read_urls_to_scan();
+        // TODO: Prepaire for very large Return values
+        // TODO: Prepaire for contious runtime - restart aber a full loop 
+        for url_string in &urls {
+            // store last visited time
+             crawler::crawl_start_url(&url_string);
         }
+        // wait // Loop
     }
+
+    stdout().flush().unwrap();
 }

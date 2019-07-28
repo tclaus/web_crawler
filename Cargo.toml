@@ -11,4 +11,5 @@ hyper = "0.10"
 hyper-native-tls = "0.3.0"
 html5ever = "0.21.0"
 url = "2.0.0"
+postgres = "0.15.2"
 

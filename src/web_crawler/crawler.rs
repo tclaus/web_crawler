@@ -4,9 +4,9 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use url::Url;
 
-use crate::fetch::{fetch_all_urls, url_status, UrlState};
-
 const THREADS: i32 = 20;
+
+use super::fetch::{fetch_all_urls, url_status, UrlState};
 
 pub struct Crawler {
     to_visit: Arc<Mutex<Vec<String>>>,
@@ -97,7 +97,37 @@ fn crawl_worker_thread(
     }
 }
 
-pub fn crawl(origin: &str, start_url: &Url) -> Crawler {
+// Start crawling this url
+pub fn crawl_start_url(start_url_string :&str) {
+        let start_url = Url::parse(start_url_string).unwrap();
+        
+        let origin = start_url.origin();
+        println!("Origin URL {}", origin.ascii_serialization());
+
+            
+        // TODO: Step1: loop through read urls from database
+        // TODO: Step2: read from database, loop through all URLS, wait and loop again (with lastread< days / hours.. )
+        // TODO: Stop3: Read chunks from database (expect data to grow significant)
+        
+        let mut success_count = 0;
+        let mut fail_count = 0;
+        for url_state in crawl(&origin.ascii_serialization(), &start_url) {
+            match url_state {
+                //TODO: Here store successful reads
+                UrlState::Accessible(_) => {
+                    success_count += 1;
+                }
+                status => {
+                    fail_count += 1;
+                    println!("{}", status);
+                }
+            }
+            println!("Succeeded: {}, Failed: {}\r", success_count, fail_count);
+        }
+}
+
+
+fn crawl(origin: &str, start_url: &Url) -> Crawler {
     let to_visit = Arc::new(Mutex::new(vec![start_url.to_string()]));
     let active_count = Arc::new(Mutex::new(0));
     let visited = Arc::new(Mutex::new(HashSet::new()));
