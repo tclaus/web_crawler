@@ -80,7 +80,7 @@ fn crawl_worker_thread(
         if let UrlState::Accessible(ref url) = state.clone() {
             if url.origin().ascii_serialization().eq_ignore_ascii_case(&origin) {
                 let new_urls = fetch_all_urls(&url);
-                println!(" Found target links: {:?}", new_urls);
+                println!(" Found target links: {:?}", new_urls.len());
                 let mut to_visit_val = to_visit.lock().unwrap();
                 for new_url in new_urls {
                     to_visit_val.push(new_url);

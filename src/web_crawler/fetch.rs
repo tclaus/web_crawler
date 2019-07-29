@@ -16,6 +16,7 @@ use url::{Url, ParseError};
 
 use super::parse;
 use super::link_checker;
+use crate::metadata;
 
 const TIMEOUT: u64 = 10;
 
@@ -103,8 +104,10 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
                 println!(" OK - follow link");
             return true
         } else {
-            // TODO: add it on the urls list (if not on the ignore list) 
             println!(" Not OK - follow link");
+            let url_result : Url = Url::parse(&path).unwrap();
+            let origin_path = url_result.origin().ascii_serialization();
+            metadata::add_new_url(&origin_path);
             return false
         }
     }
@@ -120,6 +123,7 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
 pub fn fetch_url(url: &Url) -> String {
     let ssl = NativeTlsClient::new().unwrap();
     let connector = HttpsConnector::new(ssl);
+    //TODO: Here add caller header
     let client = Client::with_connector(connector);
 
     let url_string = url.to_string();
@@ -130,7 +134,6 @@ pub fn fetch_url(url: &Url) -> String {
         .expect("Unknown url");
     
     let mut body = String::new();
-    // TODO: Here parse body for indexing 
     match res.read_to_string(&mut body) {
         Ok(_) => body,
         Err(_) => String::new(),
@@ -140,6 +143,5 @@ pub fn fetch_url(url: &Url) -> String {
 pub fn fetch_all_urls(url: &Url) -> Vec<String> {
     let html_src = fetch_url(url);
     let dom = parse::parse_html(&html_src);
-
     parse::get_urls(dom.document)
 }

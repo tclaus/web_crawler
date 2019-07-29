@@ -30,5 +30,22 @@ pub fn read_urls_to_scan() -> Vec<String> {
     }
 
     url_list
+}
 
+/*
+Add a unique new external link to list of urls
+*/
+pub fn add_new_url(origin_url_to_add : &str) {
+    
+ 
+    println!("Add new url to database:{} ", origin_url_to_add);
+
+    let conn = connection();
+    // Database has an unique index - so dont care about repetitions
+    let is_added = conn.execute("INSERT INTO url_list (url, created_at) VALUES ($1, localtimestamp)",
+                 &[&origin_url_to_add]);
+
+    if is_added.is_err() {
+        println!(" Error adding URL");
+    } 
 }
