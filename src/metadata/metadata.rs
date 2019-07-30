@@ -22,7 +22,7 @@ pub fn read_urls_to_scan() -> Vec<String> {
     let conn = connection();
     let mut url_list : Vec<String> = Vec::new();
 
-    for row in &conn.query("SELECT url FROM url_list ",&[]).expect("Error readiung URL list") {
+    for row in &conn.query("SELECT url FROM url_list ",&[]).expect("Error reading URL list") {
         let url : String = row.get("url");
         url_list.push(url.clone());
 

@@ -4,6 +4,7 @@ extern crate url;
 use std::env;
 use std::io::stdout;
 use std::io::Write;
+use std::{thread, time};
 
 mod web_crawler;
 use web_crawler::{crawler};
@@ -23,14 +24,19 @@ fn main() {
 
     } else {
         println!("Scan urls from database");
-        let urls = read_urls_to_scan();
-        // TODO: Prepaire for very large Return values
-        // TODO: Prepaire for contious runtime - restart aber a full loop 
-        for url_string in &urls {
-            // store last visited time
-             crawler::crawl_start_url(&url_string);
-        }
-        // wait // Loop
+        loop {
+            let urls = read_urls_to_scan(); // TODO: read urls scaned foir a longer time
+            // TODO: Prepaire for very large Return values
+            for url_string in &urls {
+                crawler::crawl_start_url(&url_string);
+                // store last visited time for this link
+            }
+            // wait // Loop
+            let duration = time::Duration::from_secs( 60*60*2);
+            println!("Waiting for next loop...");
+            thread::sleep(duration);
+            println!("Starting next loop");
+        } 
     }
 
     stdout().flush().unwrap();
