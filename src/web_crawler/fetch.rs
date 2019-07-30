@@ -69,7 +69,7 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
 
                 let url_string = url.to_string();
                 let resp = client.get(&url_string).send();
-            
+
                 let _ = req_tx.send(match resp {
                     Ok(r) => if let StatusCode::Ok = r.status {
                         UrlState::Accessible(url)
@@ -95,9 +95,9 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
 }
 
 fn is_valid_path(domain: &str, path: &str) -> bool {
-    
+
     if path.starts_with("https://") || path.starts_with("http://") {
-       
+
         let is_same = link_checker::url_has_same_origin_path(domain, path);
         if is_same {
             // Follow link - it's on the same domain
@@ -111,13 +111,17 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
             return false
         }
     }
-    
-    if path.starts_with("tel:") || path.starts_with("ftp:") || path.starts_with("mailto:") {
+
+    if  path.starts_with("tel:") || path.starts_with("ftp:") || path.starts_with("mailto:") {
         println!("Ignoring reference other than http: {}", path);
        return false
     }
 
-    return true
+    if path.starts_with("/") {
+        return true
+    }
+
+    return false
 }
 
 pub fn fetch_url(url: &Url) -> String {
@@ -132,7 +136,7 @@ pub fn fetch_url(url: &Url) -> String {
         .send()
         .ok()
         .expect("Unknown url");
-    
+
     let mut body = String::new();
     match res.read_to_string(&mut body) {
         Ok(_) => body,

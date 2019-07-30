@@ -32,7 +32,6 @@ pub fn crawl_start_url(start_url_string :&str) {
         let mut success_count = 0;
         let mut fail_count = 0;
         let robots_value = load_robot_value(&start_url);
-        println!(" Loaded robots.txt from: {}", start_url);
 
         for url_state in crawl(&origin.ascii_serialization(), &start_url, &robots_value) {
             match url_state {
@@ -149,8 +148,20 @@ fn crawl_worker_thread(
 }
 
 fn load_robot_value(url : &Url) -> String {
-    let robot_url = url.join(&"/robots.txt").unwrap();
-    fetch_url(&robot_url)
+    let base_url = Url::parse(&url.origin().ascii_serialization());
+    match base_url {
+        Ok(url) => {
+                    let robot_url = url.join(&"/robots.txt").unwrap();
+                    println!(" Loading robots.txt from: {}", robot_url);
+                    fetch_url(&robot_url)
+                }
+        Err(_) => {
+            println!(" Error loading Robots.txt from {}", url);
+            String::new()
+        },
+
+    }
+
 }
 
 impl Iterator for Crawler {
