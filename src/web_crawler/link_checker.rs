@@ -8,7 +8,7 @@ Compares Domain and url. Returns true if same
 */
 pub fn url_has_same_origin_path(domain: &str, path: &str) -> bool {
     // current: Ful URL
-    // link: is origon the same? 
+    // link: is origon the same?
     let url_result : Url = Url::parse(&path).unwrap();
     let origin_path = url_result.origin();
 

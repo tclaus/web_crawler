@@ -72,6 +72,7 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
 
                 let _ = req_tx.send(match resp {
                     Ok(r) => if let StatusCode::Ok = r.status {
+                        // TODO: Parse here!
                         UrlState::Accessible(url)
                     } else {
                         UrlState::BadStatus(url, r.status)
@@ -101,10 +102,10 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
         let is_same = link_checker::url_has_same_origin_path(domain, path);
         if is_same {
             // Follow link - it's on the same domain
-                println!(" OK - follow link");
+            println!(" Follow internal link");
             return true
         } else {
-            println!(" Not OK - follow link");
+            println!(" External link");
             let url_result : Url = Url::parse(&path).unwrap();
             let origin_path = url_result.origin().ascii_serialization();
             metadata::add_new_url(&origin_path);
@@ -112,8 +113,8 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
         }
     }
 
-    if  path.starts_with("tel:") || path.starts_with("ftp:") || path.starts_with("mailto:") {
-        println!("Ignoring reference other than http: {}", path);
+    if  path.starts_with("tel:") || path.starts_with("ftp:") || path.starts_with("mailto:") || path.starts_with("#") {
+        println!(" Ignoring reference other than http: {}", path);
        return false
     }
 

@@ -1,4 +1,5 @@
 
+extern crate bloom;
 
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -6,6 +7,9 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use url::Url;
 use super::robots::*;
+
+use bloom::BloomFilter;
+use bloom::ASMS;
 
 const THREADS: i32 = 20;
 
@@ -15,6 +19,13 @@ pub struct Crawler {
     to_visit: Arc<Mutex<Vec<String>>>,
     active_count: Arc<Mutex<i32>>,
     url_states: Receiver<UrlState>
+}
+
+fn init_bloom() -> BloomFilter {
+    let expected_num_items = 1000;
+    let false_positive_rate = 0.01;
+
+    BloomFilter::with_rate(false_positive_rate,expected_num_items)
 }
 
 // Start crawling this url
@@ -49,16 +60,21 @@ pub fn crawl_start_url(start_url_string :&str) {
 }
 
 fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
+
     let to_visit = Arc::new(Mutex::new(vec![start_url.to_string()]));
     let active_count = Arc::new(Mutex::new(0));
     let visited = Arc::new(Mutex::new(HashSet::new()));
-    println!(" Crawling {}, {}",origin, start_url);
+    let filter = Arc::new(Mutex::new(init_bloom()));
+
     let (tx, rx) = channel();
+
     let crawler = Crawler {
         to_visit: to_visit.clone(),
         active_count: active_count.clone(),
         url_states: rx,
     };
+
+    println!(" Crawling: {}{}",origin, start_url);
 
     for _ in 0..THREADS {
         let origin = origin.to_owned();
@@ -67,9 +83,10 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
         let active_count = active_count.clone();
         let tx = tx.clone();
         let robots_value = robots_value.to_owned();
+        let filter = filter.clone();
 
         thread::spawn(move || {
-            crawl_worker_thread(&origin, to_visit, visited, active_count, tx, &robots_value);
+            crawl_worker_thread(&origin, to_visit, visited, active_count, tx, &robots_value, filter);
         });
     }
 
@@ -83,9 +100,8 @@ fn crawl_worker_thread(
     active_count: Arc<Mutex<i32>>,
     url_states: Sender<UrlState>,
     robots_value: &str,
+    filter : Arc<Mutex<BloomFilter>>
 ) {
-    println!(" Starting thread with base:{:?}", origin);
-
     loop {
         let current;
         {
@@ -124,12 +140,17 @@ fn crawl_worker_thread(
                 let new_urls = fetch_all_urls(&url);
                 println!(" Found target links: {:?}", new_urls.len());
                 let mut to_visit_val = to_visit.lock().unwrap();
-                for new_url in new_urls {
+                let mut filter = filter.lock().unwrap();
 
-                    if is_allowed_by_robots(&robots_value, &new_url) {
-                        to_visit_val.push(new_url);
-                    } else {
-                        println!(" Not allowed by robots.txt: {}", new_url);
+                for new_url in new_urls {
+                    if !filter.contains(&new_url) {
+                        if is_allowed_by_robots(&robots_value, &new_url) {
+                            to_visit_val.push(new_url.clone());
+                        } else {
+                            // Todo: ignore on future requests
+                            println!(" Not allowed by robots.txt: {}", new_url);
+                        }
+                        filter.insert(&new_url);
                     }
                 }
             } else {

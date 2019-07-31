@@ -1,22 +1,22 @@
 extern crate postgres;
 
 
-// TODO: read connection from environment (for Server use) 
-// Create config file? 
+// TODO: read connection from environment (for Server use)
+// Create config file?
 // Create Seed file to cfreate databse and tables
 
 use postgres::{Connection, TlsMode};
 
 fn connection() -> Connection {
-    //  postgres://user:secret@localhost:5432/mydatabasename 
-    
+    //  postgres://user:secret@localhost:5432/mydatabasename
+
     //TODO: Read connection from environment
     Connection::connect("postgres://postgres@localhost/webcrawler_dev",
                                TlsMode::None).unwrap()
 }
 
 pub fn read_urls_to_scan() -> Vec<String> {
-    // How to hanle millions of urls? 
+    // How to hanle millions of urls?
     // A: Scan only for Urls with last_scan_date less than a treshold
 
     let conn = connection();
@@ -36,9 +36,8 @@ pub fn read_urls_to_scan() -> Vec<String> {
 Add a unique new external link to list of urls
 */
 pub fn add_new_url(origin_url_to_add : &str) {
-    
- 
-    println!("Add new url to database:{} ", origin_url_to_add);
+
+    println!("Add new url to database: {} ", origin_url_to_add);
 
     let conn = connection();
     // Database has an unique index - so dont care about repetitions
@@ -47,5 +46,5 @@ pub fn add_new_url(origin_url_to_add : &str) {
 
     if is_added.is_err() {
         println!(" Error adding URL");
-    } 
+    }
 }
