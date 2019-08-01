@@ -31,7 +31,7 @@ fn main() {
                 // store last visited time for this link
             }
             // wait // Loop
-            let duration = time::Duration::from_secs(60 * 60 * 2);
+            let duration = time::Duration::from_secs(60 * 60 * 2); // 2h warten
             println!("Waiting for next loop...");
             thread::sleep(duration);
             println!("Starting next loop");

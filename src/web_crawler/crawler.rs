@@ -160,6 +160,7 @@ fn crawl_worker_thread(
                 for new_url in new_urls {
                     if !filter.contains(&new_url) {
                         if is_allowed_by_robots(&robots_value, &new_url) {
+                            // Add new URLS to list of urls to visit
                             to_visit_val.push(new_url.clone());
                         } else {
                             // Todo: ignore on future requests
