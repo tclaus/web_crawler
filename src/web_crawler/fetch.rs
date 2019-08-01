@@ -2,23 +2,23 @@ extern crate hyper;
 extern crate hyper_native_tls;
 extern crate url;
 
+use std::fmt;
 use std::io::Read;
+use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
-use std::sync::mpsc::channel;
-use std::fmt;
 
+use self::hyper::status::StatusCode;
 use self::hyper::Client;
 use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
-use self::hyper::status::StatusCode;
-use url::{Url, ParseError};
+use url::{ParseError, Url};
 
-use super::parse;
 use super::link_checker;
+use super::parse;
 use crate::metadata;
 
-const TIMEOUT: u64 = 10;
+const TIMEOUT: u64 = 3;
 
 #[derive(Debug, Clone)]
 pub enum UrlState {
@@ -43,17 +43,17 @@ impl fmt::Display for UrlState {
     }
 }
 
-fn build_url(domain: &str, path: &str) ->  Result<Url, ParseError> {
+fn build_url(domain: &str, path: &str) -> Result<Url, ParseError> {
     let base_url = Url::parse(&domain)?;
     base_url.join(path)
 }
 
 pub fn url_status(domain: &str, path: &str) -> UrlState {
-   println!("Fetch URL Domain, path: {},{}",domain, path);
+    println!("Fetch URL Domain, path: {},{}", domain, path);
 
     // Ignore known invalid links
     if !is_valid_path(domain, path) {
-        UrlState::InvalidLink(path.to_owned());
+        return UrlState::InvalidLink(path.to_string());
     }
 
     match build_url(domain, path) {
@@ -68,19 +68,26 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
                 let client = Client::with_connector(connector);
 
                 let url_string = url.to_string();
+
+                println!(" Fetching {}", &url_string);
                 let resp = client.get(&url_string).send();
 
                 let _ = req_tx.send(match resp {
-                    Ok(r) => if let StatusCode::Ok = r.status {
-                        // TODO: Parse here!
-                        UrlState::Accessible(url)
-                    } else {
-                        UrlState::BadStatus(url, r.status)
-                    },
+                    Ok(r) => {
+                        if let StatusCode::Ok = r.status {
+                            println!(" Response: OK");
+                            // TODO: Parse here!
+                            UrlState::Accessible(url)
+                        } else {
+                            println!(" Response: Bad Status ({})", r.status);
+                            UrlState::BadStatus(url, r.status)
+                        }
+                    }
                     Err(_) => UrlState::ConnectionFailed(url),
                 });
             });
 
+            // Timeout watcher
             thread::spawn(move || {
                 thread::sleep(Duration::from_secs(TIMEOUT));
                 let _ = tx.send(UrlState::TimedOut(u));
@@ -90,39 +97,43 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
         }
         Err(_) => {
             println!("ERROR");
-                UrlState::Malformed(path.to_owned())
-            } ,
+            UrlState::Malformed(path.to_owned())
+        }
     }
 }
 
+/// Check if url is valid to crawl.
+/// Dont follow external links here. Add them to a list of data to crawl.
 fn is_valid_path(domain: &str, path: &str) -> bool {
-
     if path.starts_with("https://") || path.starts_with("http://") {
-
         let is_same = link_checker::url_has_same_origin_path(domain, path);
         if is_same {
             // Follow link - it's on the same domain
             println!(" Follow internal link");
-            return true
+            return true;
         } else {
             println!(" External link");
-            let url_result : Url = Url::parse(&path).unwrap();
-            let origin_path = url_result.origin().ascii_serialization();
+            let url_result: Url = Url::parse(&path).unwrap();
+            let origin_path = url_result.origin().unicode_serialization();
             metadata::add_new_url(&origin_path);
-            return false
+            return false;
         }
     }
 
-    if  path.starts_with("tel:") || path.starts_with("ftp:") || path.starts_with("mailto:") || path.starts_with("#") {
+    if path.starts_with("tel:")
+        || path.starts_with("ftp:")
+        || path.starts_with("mailto:")
+        || path.starts_with('#')
+    {
         println!(" Ignoring reference other than http: {}", path);
-       return false
+        return false;
     }
 
-    if path.starts_with("/") {
-        return true
+    if path.starts_with('/') {
+        return true;
     }
 
-    return false
+    false
 }
 
 pub fn fetch_url(url: &Url) -> String {
@@ -132,15 +143,17 @@ pub fn fetch_url(url: &Url) -> String {
     let client = Client::with_connector(connector);
 
     let url_string = url.to_string();
-    let mut res = client
-        .get(&url_string)
-        .send()
-        .ok()
-        .expect("Unknown url");
+    let res = client.get(&url_string).send();
 
-    let mut body = String::new();
-    match res.read_to_string(&mut body) {
-        Ok(_) => body,
+    match res {
+        Ok(response) => {
+            let mut body = String::new();
+            let mut response = response;
+            match response.read_to_string(&mut body) {
+                Ok(_) => body,
+                Err(_) => String::new(),
+            }
+        }
         Err(_) => String::new(),
     }
 }

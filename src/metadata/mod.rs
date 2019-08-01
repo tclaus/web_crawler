@@ -1,3 +1,2 @@
-
-pub mod metadata;
+mod metadata;
 pub use metadata::*;

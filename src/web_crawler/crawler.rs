@@ -1,15 +1,15 @@
-
 extern crate bloom;
 
+use super::robots::*;
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use url::Url;
-use super::robots::*;
 
 use bloom::BloomFilter;
 use bloom::ASMS;
+use hyper::status::StatusCode;
 
 const THREADS: i32 = 20;
 
@@ -18,49 +18,47 @@ use super::fetch::{fetch_all_urls, fetch_url, url_status, UrlState};
 pub struct Crawler {
     to_visit: Arc<Mutex<Vec<String>>>,
     active_count: Arc<Mutex<i32>>,
-    url_states: Receiver<UrlState>
+    url_states: Receiver<UrlState>,
 }
 
 fn init_bloom() -> BloomFilter {
     let expected_num_items = 1000;
     let false_positive_rate = 0.01;
 
-    BloomFilter::with_rate(false_positive_rate,expected_num_items)
+    BloomFilter::with_rate(false_positive_rate, expected_num_items)
 }
 
 // Start crawling this url
-pub fn crawl_start_url(start_url_string :&str) {
-        let start_url = Url::parse(start_url_string).unwrap();
+pub fn crawl_start_url(start_url_string: &str) {
+    let start_url = Url::parse(start_url_string).unwrap();
 
-        let origin = start_url.origin();
-        println!(" Origin URL {}", origin.ascii_serialization());
+    let origin = start_url.origin();
+    println!(" Origin URL {}", origin.unicode_serialization());
 
+    // TODO: Step1: loop through read urls from database
+    // TODO: Step2: read from database, loop through all URLS, wait and loop again (with lastread< days / hours.. )
+    // TODO: Stop3: Read chunks from database (expect data to grow significant)
 
-        // TODO: Step1: loop through read urls from database
-        // TODO: Step2: read from database, loop through all URLS, wait and loop again (with lastread< days / hours.. )
-        // TODO: Stop3: Read chunks from database (expect data to grow significant)
+    let mut success_count = 0;
+    let mut fail_count = 0;
+    let robots_value = load_robot_value(&start_url);
 
-        let mut success_count = 0;
-        let mut fail_count = 0;
-        let robots_value = load_robot_value(&start_url);
-
-        for url_state in crawl(&origin.ascii_serialization(), &start_url, &robots_value) {
-            match url_state {
-                //TODO: Here store successful reads
-                UrlState::Accessible(_) => {
-                    success_count += 1;
-                }
-                status => {
-                    fail_count += 1;
-                    println!("{}", status);
-                }
+    for url_state in crawl(&origin.unicode_serialization(), &start_url, &robots_value) {
+        match url_state {
+            //TODO: Here store successful reads
+            UrlState::Accessible(_) => {
+                success_count += 1;
             }
-            println!("Succeeded: {}, Failed: {}\r", success_count, fail_count);
+            status => {
+                fail_count += 1;
+                println!("{}", status);
+            }
         }
+        println!("Succeeded: {}, Failed: {}\r", success_count, fail_count);
+    }
 }
 
 fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
-
     let to_visit = Arc::new(Mutex::new(vec![start_url.to_string()]));
     let active_count = Arc::new(Mutex::new(0));
     let visited = Arc::new(Mutex::new(HashSet::new()));
@@ -74,7 +72,7 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
         url_states: rx,
     };
 
-    println!(" Crawling: {}{}",origin, start_url);
+    println!(" Crawling: {}{}", origin, start_url);
 
     for _ in 0..THREADS {
         let origin = origin.to_owned();
@@ -86,7 +84,15 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
         let filter = filter.clone();
 
         thread::spawn(move || {
-            crawl_worker_thread(&origin, to_visit, visited, active_count, tx, &robots_value, filter);
+            crawl_worker_thread(
+                &origin,
+                to_visit,
+                visited,
+                active_count,
+                tx,
+                &robots_value,
+                filter,
+            );
         });
     }
 
@@ -100,8 +106,10 @@ fn crawl_worker_thread(
     active_count: Arc<Mutex<i32>>,
     url_states: Sender<UrlState>,
     robots_value: &str,
-    filter : Arc<Mutex<BloomFilter>>
+    filter: Arc<Mutex<BloomFilter>>,
 ) {
+    let mut disallowed_domains: HashSet<String> = HashSet::new();
+
     loop {
         let current;
         {
@@ -134,27 +142,42 @@ fn crawl_worker_thread(
         }
 
         let state = url_status(&origin, &current);
-
         if let UrlState::Accessible(ref url) = state.clone() {
-            if url.origin().ascii_serialization().eq_ignore_ascii_case(&origin) {
-                let new_urls = fetch_all_urls(&url);
-                println!(" Found target links: {:?}", new_urls.len());
-                let mut to_visit_val = to_visit.lock().unwrap();
-                let mut filter = filter.lock().unwrap();
+            println!(" Accessible. Check for dive deeper");
 
-                for new_url in new_urls {
-                    if !filter.contains(&new_url) {
-                        if is_allowed_by_robots(&robots_value, &new_url) {
-                            to_visit_val.push(new_url.clone());
-                        } else {
-                            // Todo: ignore on future requests
-                            println!(" Not allowed by robots.txt: {}", new_url);
-                        }
-                        filter.insert(&new_url);
-                    }
-                }
+            if disallowed_domains.contains(&url.domain().unwrap().to_string()) {
+                println!(" URL {} is marked as disallowed. Continue to next.", &url);
             } else {
-                println!(" Found no links");
+                if url
+                    .origin()
+                    .ascii_serialization()
+                    .eq_ignore_ascii_case(&origin)
+                {
+                    let new_urls = fetch_all_urls(&url);
+                    println!(" Found target links: {:?}", new_urls.len());
+                    let mut to_visit_val = to_visit.lock().unwrap();
+                    let mut filter = filter.lock().unwrap();
+
+                    for new_url in new_urls {
+                        if !filter.contains(&new_url) {
+                            if is_allowed_by_robots(&robots_value, &new_url) {
+                                to_visit_val.push(new_url.clone());
+                            } else {
+                                // Todo: ignore on future requests
+                                println!(" Not allowed by robots.txt: {}", new_url);
+                            }
+                            filter.insert(&new_url);
+                        }
+                    }
+                } else {
+                    println!(" Found no links");
+                }
+            }
+        } else {
+            // If state == (429 Too Many Requests) then ignore full domain for now
+            if let UrlState::BadStatus(ref url, StatusCode::TooManyRequests) = state.clone() {
+                println!("Too Many requests. Add to ignore list");
+                disallowed_domains.insert(url.domain().unwrap().to_string());
             }
         }
 
@@ -168,21 +191,19 @@ fn crawl_worker_thread(
     }
 }
 
-fn load_robot_value(url : &Url) -> String {
+fn load_robot_value(url: &Url) -> String {
     let base_url = Url::parse(&url.origin().ascii_serialization());
     match base_url {
         Ok(url) => {
-                    let robot_url = url.join(&"/robots.txt").unwrap();
-                    println!(" Loading robots.txt from: {}", robot_url);
-                    fetch_url(&robot_url)
-                }
+            let robot_url = url.join(&"/robots.txt").unwrap();
+            println!(" Loading robots.txt from: {}", robot_url);
+            fetch_url(&robot_url)
+        }
         Err(_) => {
             println!(" Error loading Robots.txt from {}", url);
             String::new()
-        },
-
+        }
     }
-
 }
 
 impl Iterator for Crawler {

@@ -12,5 +12,5 @@ hyper-native-tls = "0.3.0"
 html5ever = "0.21.0"
 url = "2.0.0"
 postgres = "0.15.2"
-robots_txt = "0.6.0"
+robots_txt =  { path = "../robots_txt" }
 bloom = "0.3.2"
