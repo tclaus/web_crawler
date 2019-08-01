@@ -115,8 +115,11 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
             println!(" External link");
             let url_result: Url = Url::parse(&path).unwrap();
             let origin_path = url_result.origin().unicode_serialization();
+            if origin_path.starts_with("http://localhost") || origin_path.starts_with("https://localhost") {
+                return false
+            }
             metadata::add_new_url(&origin_path);
-            return false;
+            return false
         }
     }
 
@@ -126,7 +129,7 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
         || path.starts_with('#')
     {
         println!(" Ignoring reference other than http: {}", path);
-        return false;
+        return false
     }
 
     if path.starts_with('/') {

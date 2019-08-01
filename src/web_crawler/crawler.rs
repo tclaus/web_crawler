@@ -147,8 +147,7 @@ fn crawl_worker_thread(
 
             if disallowed_domains.contains(&url.domain().unwrap().to_string()) {
                 println!(" URL {} is marked as disallowed. Continue to next.", &url);
-            } else {
-                if url
+            } else if url
                     .origin()
                     .ascii_serialization()
                     .eq_ignore_ascii_case(&origin)
@@ -172,7 +171,6 @@ fn crawl_worker_thread(
                 } else {
                     println!(" Found no links");
                 }
-            }
         } else {
             // If state == (429 Too Many Requests) then ignore full domain for now
             if let UrlState::BadStatus(ref url, StatusCode::TooManyRequests) = state.clone() {
