@@ -148,29 +148,29 @@ fn crawl_worker_thread(
             if disallowed_domains.contains(&url.domain().unwrap().to_string()) {
                 println!(" URL {} is marked as disallowed. Continue to next.", &url);
             } else if url
-                    .origin()
-                    .ascii_serialization()
-                    .eq_ignore_ascii_case(&origin)
-                {
-                    let new_urls = fetch_all_urls(&url);
-                    println!(" Found target links: {:?}", new_urls.len());
-                    let mut to_visit_val = to_visit.lock().unwrap();
-                    let mut filter = filter.lock().unwrap();
+                .origin()
+                .ascii_serialization()
+                .eq_ignore_ascii_case(&origin)
+            {
+                let new_urls = fetch_all_urls(&url);
+                println!(" Found target links: {:?}", new_urls.len());
+                let mut to_visit_val = to_visit.lock().unwrap();
+                let mut filter = filter.lock().unwrap();
 
-                    for new_url in new_urls {
-                        if !filter.contains(&new_url) {
-                            if is_allowed_by_robots(&robots_value, &new_url) {
-                                to_visit_val.push(new_url.clone());
-                            } else {
-                                // Todo: ignore on future requests
-                                println!(" Not allowed by robots.txt: {}", new_url);
-                            }
-                            filter.insert(&new_url);
+                for new_url in new_urls {
+                    if !filter.contains(&new_url) {
+                        if is_allowed_by_robots(&robots_value, &new_url) {
+                            to_visit_val.push(new_url.clone());
+                        } else {
+                            // Todo: ignore on future requests
+                            println!(" Not allowed by robots.txt: {}", new_url);
                         }
+                        filter.insert(&new_url);
                     }
-                } else {
-                    println!(" Found no links");
                 }
+            } else {
+                println!(" Found no links");
+            }
         } else {
             // If state == (429 Too Many Requests) then ignore full domain for now
             if let UrlState::BadStatus(ref url, StatusCode::TooManyRequests) = state.clone() {
