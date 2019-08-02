@@ -13,6 +13,8 @@ use bloom::ASMS;
 use hyper::status::StatusCode;
 
 const THREADS: i32 = 20;
+const MAX_URL_LENGTH: u32 = 100;
+const MAX_LINK_DEEPH: u8 = 3;
 
 use super::fetch::{fetch_all_urls, fetch_url, url_status, UrlState};
 
@@ -188,7 +190,7 @@ fn crawl_worker_thread(
                 .eq_ignore_ascii_case(&origin)
             {
                 let new_urls = fetch_all_urls(&url);
-                println!("  Current target link count: {:?}", new_urls.len());
+                println!("  Found new Urls: {:?}", new_urls.len());
                 let mut to_visit_val = to_visit.lock().unwrap();
                 let mut filter = filter.lock().unwrap();
 
@@ -196,8 +198,10 @@ fn crawl_worker_thread(
                     if !filter.contains(&new_url) {
                         if !is_allowed_by_robots(&robots_value, &new_url) {
                             println!("  Not allowed by robots.txt: {}", &new_url);
-                        } else if current.deeph > 3 {
+                        } else if current.deeph > MAX_LINK_DEEPH {
                             println!("  Not allowed. Too deeph: {}", &new_url);
+                        } else if new_url.len() as u32> MAX_URL_LENGTH {
+                            println!("  Not allowed. Url too long. {}", &new_url);
                         } else {
                             // Add new URLS to list of urls to visit
                             println!("  Add new Url to hashMap: {}", &new_url);
@@ -213,6 +217,7 @@ fn crawl_worker_thread(
                         filter.insert(&new_url);
                     }
                 }
+                println!("  Links left to visit: {}", to_visit_val.len());
             } else {
                 println!("  Found no links");
             }
