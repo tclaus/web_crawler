@@ -38,7 +38,9 @@ impl fmt::Display for UrlState {
             UrlState::ConnectionFailed(ref url) => format!("x {} (connection failed)", url).fmt(f),
             UrlState::TimedOut(ref url) => format!("x {} (timed out)", url).fmt(f),
             UrlState::Malformed(ref url) => format!("x {} (malformed)", url).fmt(f),
-            UrlState::InvalidLink(ref url) => format!("x {} (invalid link)", url).fmt(f),
+            UrlState::InvalidLink(ref url) => {
+                format!("x {} (Invalid or external Link)", url).fmt(f)
+            }
         }
     }
 }

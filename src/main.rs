@@ -19,7 +19,7 @@ fn main() {
     if args.len() > 1 {
         println!("Scan urls from commandline");
         let start_url_string = &args[1];
-        println!(" Start parsing {}", start_url_string);
+        println!(" Start parsing {}", &start_url_string);
         crawler::crawl_start_url(&start_url_string);
     } else {
         println!("Scan urls from database");

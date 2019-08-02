@@ -5,17 +5,19 @@ use url::Url;
 /*
 Compares Domain and url. Returns true if same
 */
-pub fn url_has_same_origin_path(domain: &str, path: &str) -> bool {
+pub fn url_has_same_origin_path(domain: &str, target: &str) -> bool {
     // current: Ful URL
     // link: is origon the same?
-    let url_result: Url = Url::parse(&path).unwrap();
-    let origin_path = url_result.origin();
+    let target_url: Url = Url::parse(&target).unwrap();
+    let target_origin = target_url.host_str().unwrap().replace("www.", "");
 
-    let origin_path_string = origin_path.unicode_serialization();
+    let domain: Url = Url::parse(&domain).unwrap();
+    let domain_origin = domain.host_str().unwrap().replace("www.", "");
+
     println!(
-        " Comparing Current path base  {} with link-base: {}",
-        domain, origin_path_string
+        " Comparing Current path base {} with link-base: {}",
+        domain_origin, target_origin
     );
 
-    domain.eq_ignore_ascii_case(&origin_path_string)
+    domain_origin.eq_ignore_ascii_case(&target_origin)
 }
