@@ -14,9 +14,9 @@ use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
 use url::{ParseError, Url};
 
-use super::link_checker;
-use super::parse;
 use crate::metadata;
+use crate::web_crawler::link_checker;
+use crate::web_crawler::parse;
 
 const TIMEOUT: u64 = 3;
 
@@ -143,6 +143,13 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
     false
 }
 
+/// Fetch and parse target
+pub fn fetch_all_urls(url: &Url) -> Vec<String> {
+    let html_src = fetch_url(url);
+    let dom = parse::parse_html(&html_src);
+    parse::get_urls(dom.document)
+}
+
 pub fn fetch_url(url: &Url) -> String {
     let ssl = NativeTlsClient::new().unwrap();
     let connector = HttpsConnector::new(ssl);
@@ -163,10 +170,4 @@ pub fn fetch_url(url: &Url) -> String {
         }
         Err(_) => String::new(),
     }
-}
-
-pub fn fetch_all_urls(url: &Url) -> Vec<String> {
-    let html_src = fetch_url(url);
-    let dom = parse::parse_html(&html_src);
-    parse::get_urls(dom.document)
 }

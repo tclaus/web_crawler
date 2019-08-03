@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{thread, time};
 use url::Url;
 
 use bloom::BloomFilter;
@@ -200,7 +200,7 @@ fn crawl_worker_thread(
                             println!("  Not allowed by robots.txt: {}", &new_url);
                         } else if current.deeph > MAX_LINK_DEEPH {
                             println!("  Not allowed. Too deeph: {}", &new_url);
-                        } else if new_url.len() as u32> MAX_URL_LENGTH {
+                        } else if new_url.len() as u32 > MAX_URL_LENGTH {
                             println!("  Not allowed. Url too long. {}", &new_url);
                         } else {
                             // Add new URLS to list of urls to visit
@@ -259,6 +259,7 @@ impl Iterator for Crawler {
 
     fn next(&mut self) -> Option<UrlState> {
         loop {
+            thread::sleep(time::Duration::from_secs(1));
             match self.url_states.recv() {
                 Ok(state) => return Some(state),
                 Err(_) => {
