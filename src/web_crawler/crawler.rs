@@ -168,7 +168,7 @@ fn crawl_worker_thread(
         {
             // Dont visit already visited urls
             let mut visited_val = visited.lock().unwrap();
-            if visited_val.contains(&current.url) {
+            if visited_val.contains(&current.url) || current.deeph > MAX_LINK_DEEPH {
                 println!("  Already visited {:?}", &current);
                 let mut active_count_val = active_count.lock().unwrap();
                 *active_count_val -= 1;
@@ -180,8 +180,6 @@ fn crawl_worker_thread(
 
         let state = url_status(&origin, &current.url);
         if let UrlState::Accessible(ref url) = state.clone() {
-            println!("  Accessible. Check for dive deeper");
-
             if too_many_requests_list.contains(&url.domain().unwrap().to_string()) {
                 println!("  URL {} had too many requsts. Continue to next.", &url);
             } else if url
@@ -204,7 +202,6 @@ fn crawl_worker_thread(
                             println!("  Not allowed. Url too long. {}", &new_url);
                         } else {
                             // Add new URLS to list of urls to visit
-                            println!("  Add new Url to hashMap: {}", &new_url);
                             to_visit_val.insert(
                                 new_url.clone(),
                                 UrlData {

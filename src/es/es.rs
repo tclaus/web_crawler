@@ -4,11 +4,10 @@ use elastic::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
 
+#[derive(Debug)]
 #[elastic(index = "crawler_index")]
 #[derive(ElasticType, Serialize, Deserialize)]
 pub struct WebDocument {
-    #[elastic(id)]
-    pub id: String,
     pub title: String,
     pub url: String,
     pub description: String,
@@ -36,13 +35,16 @@ fn ensure_indexed(client: &Client<SyncSender>, doc: WebDocument) {
             .create()
             .send()
             .err();
+
+        // Add the document mapping (optional, but makes sure `timestamp` is mapped as a `date`)
+        client.document::<WebDocument>().put_mapping().send().err();
     }
 
-    // Add the document mapping (optional, but makes sure `timestamp` is mapped as a `date`)
-    client.document::<WebDocument>().put_mapping().send().err();
-
+    // println!(" Indexing of {:?}...", &doc);
     // Index the document
-    client.document().index(doc).send().unwrap();
+    let result = client.document().index(doc).send();
+
+    println!(" Index result: {:?}", result);
 }
 
 /// Add serializable Document to index

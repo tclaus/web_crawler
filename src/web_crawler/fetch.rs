@@ -51,8 +51,6 @@ fn build_url(domain: &str, path: &str) -> Result<Url, ParseError> {
 }
 
 pub fn url_status(domain: &str, path: &str) -> UrlState {
-    println!("Fetch URL Domain, path: {},{}", domain, path);
-
     // Ignore known invalid links
     if !is_valid_path(domain, path) {
         return UrlState::InvalidLink(path.to_string());
@@ -73,6 +71,7 @@ pub fn url_status(domain: &str, path: &str) -> UrlState {
 
                 println!(" Fetching {}", &url_string);
                 let resp = client.get(&url_string).send();
+                // Parse!
 
                 let _ = req_tx.send(match resp {
                     Ok(r) => {
@@ -146,8 +145,9 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
 /// Fetch and parse target
 pub fn fetch_all_urls(url: &Url) -> Vec<String> {
     let html_src = fetch_url(url);
-    let dom = parse::parse_html(&html_src);
-    parse::get_urls(dom.document)
+    let document = parse::parse_html(&html_src);
+    parse::parse_for_index(&document, &url.to_string());
+    parse::get_urls(&document)
 }
 
 pub fn fetch_url(url: &Url) -> String {
