@@ -43,8 +43,10 @@ fn ensure_indexed(client: &Client<SyncSender>, doc: WebDocument) {
     // println!(" Indexing of {:?}...", &doc);
     // Index the document
     let result = client.document().index(doc).send();
-
-    println!(" Index result: {:?}", result);
+    match result {
+        Ok(_) => println!(" Index Ok"),
+        Err(value) => println!(" Index result: {}", value),
+    }
 }
 
 /// Add serializable Document to index

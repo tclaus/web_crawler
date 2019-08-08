@@ -2,7 +2,6 @@ extern crate bloom;
 
 use super::robots::*;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
@@ -10,13 +9,12 @@ use url::Url;
 
 use bloom::BloomFilter;
 use bloom::ASMS;
-use hyper::status::StatusCode;
 
 const THREADS: i32 = 20;
 const MAX_URL_LENGTH: u32 = 100;
 const MAX_LINK_DEEPH: u8 = 3;
 
-use super::fetch::{fetch_all_urls, fetch_url, url_status, UrlState};
+use super::fetch::{parse_and_fetch_all_urls, fetch_url, url_status, UrlState};
 
 #[derive(Debug)]
 pub struct UrlData {
@@ -79,7 +77,6 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
 
     let to_visit = Arc::new(Mutex::new(url_hash));
     let active_count = Arc::new(Mutex::new(0));
-    let visited = Arc::new(Mutex::new(HashSet::new()));
     let filter = Arc::new(Mutex::new(init_bloom()));
 
     let (tx, rx) = channel();
@@ -95,7 +92,6 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
     for _ in 0..THREADS {
         let origin = origin.to_owned();
         let to_visit = to_visit.clone();
-        let visited = visited.clone();
         let active_count = active_count.clone();
         let tx = tx.clone();
         let robots_value = robots_value.to_owned();
@@ -105,7 +101,6 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) -> Crawler {
             crawl_worker_thread(
                 &origin,
                 to_visit,
-                visited,
                 active_count,
                 tx,
                 &robots_value,
@@ -138,13 +133,11 @@ fn get_first_element(hash_map: &mut HashMap<String, UrlData>) -> UrlData {
 fn crawl_worker_thread(
     origin: &str,
     to_visit: Arc<Mutex<HashMap<String, UrlData>>>,
-    visited: Arc<Mutex<HashSet<String>>>,
     active_count: Arc<Mutex<i32>>,
     url_states: Sender<UrlState>,
     robots_value: &str,
     filter: Arc<Mutex<BloomFilter>>,
 ) {
-    let mut too_many_requests_list: HashSet<String> = HashSet::new();
 
     loop {
         let current: UrlData;
@@ -155,53 +148,56 @@ fn crawl_worker_thread(
                 if *active_count_val > 0 {
                     continue;
                 } else {
+                    println!("Exiting thread");
                     break;
                 }
             };
-            // Get a random url
+            // Get a url from stack
             current = get_first_element(&mut to_visit_val);
             println!(" Links left to check: {:?}", to_visit_val.len());
             *active_count_val += 1;
             assert!(*active_count_val <= THREADS);
         }
-
+            // Check for max deeph
+            if current.deeph > MAX_LINK_DEEPH {
+                let mut active_count_val = active_count.lock().unwrap();
+                *active_count_val -= 1;
+                continue;
+            }
         {
-            // Dont visit already visited urls
-            let mut visited_val = visited.lock().unwrap();
-            if visited_val.contains(&current.url) || current.deeph > MAX_LINK_DEEPH {
-                println!("  Already visited {:?}", &current);
+            // Dont visit already visited urls or too deeph
+            let mut filter = filter.lock().unwrap();
+            if filter.contains(&current.url)  {
+                println!("  Already visited: {:?}", &current);
                 let mut active_count_val = active_count.lock().unwrap();
                 *active_count_val -= 1;
                 continue;
             } else {
-                visited_val.insert(current.url.to_owned());
+                filter.insert(&current.url.clone());
             }
         }
 
+        // Base URL is nopt too deeph and not already visited.So dive deeper
+        // and crawl next level
         let state = url_status(&origin, &current.url);
         if let UrlState::Accessible(ref url) = state.clone() {
-            if too_many_requests_list.contains(&url.domain().unwrap().to_string()) {
-                println!("  URL {} had too many requsts. Continue to next.", &url);
-            } else if url
+            if url
                 .origin()
                 .unicode_serialization()
                 .eq_ignore_ascii_case(&origin)
             {
-                let new_urls = fetch_all_urls(&url);
+                // Same Origin, add to list
+                let new_urls = parse_and_fetch_all_urls(&url);
                 println!("  Found new Urls: {:?}", new_urls.len());
                 let mut to_visit_val = to_visit.lock().unwrap();
-                let mut filter = filter.lock().unwrap();
-
+                // Add all valid URLs to list of to_visit URLs
                 for new_url in new_urls {
-                    if !filter.contains(&new_url) {
                         if !is_allowed_by_robots(&robots_value, &new_url) {
                             println!("  Not allowed by robots.txt: {}", &new_url);
-                        } else if current.deeph > MAX_LINK_DEEPH {
-                            println!("  Not allowed. Too deeph: {}", &new_url);
                         } else if new_url.len() as u32 > MAX_URL_LENGTH {
                             println!("  Not allowed. Url too long. {}", &new_url);
                         } else {
-                            // Add new URLS to list of urls to visit
+                            // Add new URLS to list of urls to_visit
                             to_visit_val.insert(
                                 new_url.clone(),
                                 UrlData {
@@ -210,19 +206,10 @@ fn crawl_worker_thread(
                                 },
                             );
                         }
-
-                        filter.insert(&new_url);
-                    }
                 }
                 println!("  Links left to visit: {}", to_visit_val.len());
             } else {
                 println!("  Found no links");
-            }
-        } else {
-            // If state == (429 Too Many Requests) then ignore full domain for now
-            if let UrlState::BadStatus(ref url, StatusCode::TooManyRequests) = state.clone() {
-                println!("  ! Too Many requests. Add to ignore list");
-                too_many_requests_list.insert(url.domain().unwrap().to_string());
             }
         }
 

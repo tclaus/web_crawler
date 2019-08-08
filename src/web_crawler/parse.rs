@@ -1,7 +1,7 @@
 use crate::es::es::WebDocument;
 use crate::es::*;
 use select::document::Document;
-use select::predicate::{Attr, Class, Name, Predicate};
+use select::predicate::Name;
 use std::string::String;
 
 pub fn parse_html(source: &str) -> Document {

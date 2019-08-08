@@ -143,7 +143,7 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
 }
 
 /// Fetch and parse target
-pub fn fetch_all_urls(url: &Url) -> Vec<String> {
+pub fn parse_and_fetch_all_urls(url: &Url) -> Vec<String> {
     let html_src = fetch_url(url);
     let document = parse::parse_html(&html_src);
     parse::parse_for_index(&document, &url.to_string());
