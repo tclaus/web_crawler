@@ -5,5 +5,4 @@ pub mod fetch;
 pub mod parse;
 pub mod robots;
 
-pub use crawler::Crawler;
 pub use fetch::UrlState;

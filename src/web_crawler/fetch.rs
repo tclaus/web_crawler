@@ -4,9 +4,6 @@ extern crate url;
 
 use std::fmt;
 use std::io::Read;
-use std::sync::mpsc::channel;
-use std::thread;
-use std::time::Duration;
 
 use self::hyper::status::StatusCode;
 use self::hyper::Client;
@@ -17,8 +14,6 @@ use url::{ParseError, Url};
 use crate::metadata;
 use crate::web_crawler::link_checker;
 use crate::web_crawler::parse;
-
-const TIMEOUT: u64 = 3;
 
 #[derive(Debug, Clone)]
 pub enum UrlState {
@@ -45,62 +40,14 @@ impl fmt::Display for UrlState {
     }
 }
 
-fn build_url(domain: &str, path: &str) -> Result<Url, ParseError> {
+/// Buils a URL from a domain and a path part
+pub fn build_url(domain: &str, path: &str) -> Result<Url, ParseError> {
     let base_url = Url::parse(&domain)?;
     base_url.join(path)
 }
 
-pub fn url_status(domain: &str, path: &str) -> UrlState {
-    // Ignore known invalid links
-    if !is_valid_path(domain, path) {
-        return UrlState::InvalidLink(path.to_string());
-    }
-
-    match build_url(domain, path) {
-        Ok(url) => {
-            let (tx, rx) = channel();
-            let req_tx = tx.clone();
-            let u = url.clone();
-
-            thread::spawn(move || {
-                let ssl = NativeTlsClient::new().unwrap();
-                let connector = HttpsConnector::new(ssl);
-                let client = Client::with_connector(connector);
-
-                let url_string = url.to_string();
-
-                println!(" Fetching {}", &url_string);
-                let resp = client.get(&url_string).send();
-                // Parse!
-
-                let _ = req_tx.send(match resp {
-                    Ok(r) => {
-                        if let StatusCode::Ok = r.status {
-                            println!(" Response: OK");
-                            // TODO: Parse here!
-                            UrlState::Accessible(url)
-                        } else {
-                            println!(" Response: Bad Status ({})", r.status);
-                            UrlState::BadStatus(url, r.status)
-                        }
-                    }
-                    Err(_) => UrlState::ConnectionFailed(url),
-                });
-            });
-
-            // Timeout watcher
-            thread::spawn(move || {
-                thread::sleep(Duration::from_secs(TIMEOUT));
-                let _ = tx.send(UrlState::TimedOut(u));
-            });
-
-            rx.recv().unwrap()
-        }
-        Err(_) => {
-            println!("ERROR");
-            UrlState::Malformed(path.to_owned())
-        }
-    }
+pub fn url_status(domain: &str, path: &str) -> bool {
+    return is_valid_path(domain, path);
 }
 
 /// Check if url is valid to crawl.
@@ -121,6 +68,7 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
             {
                 return false;
             }
+            // Tore to database
             metadata::add_new_url(&origin_path);
             return false;
         }
@@ -153,7 +101,6 @@ pub fn parse_and_fetch_all_urls(url: &Url) -> Vec<String> {
 pub fn fetch_url(url: &Url) -> String {
     let ssl = NativeTlsClient::new().unwrap();
     let connector = HttpsConnector::new(ssl);
-    //TODO: Here add caller header
     let client = Client::with_connector(connector);
 
     let url_string = url.to_string();
