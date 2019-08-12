@@ -1,10 +1,10 @@
 extern crate bloom;
 
-use crate::web_crawler::fetch::build_url;
 use super::robots::*;
+use crate::web_crawler::fetch::build_url;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::{thread, time};
+use std::thread;
 use url::Url;
 
 use bloom::BloomFilter;
@@ -14,7 +14,7 @@ const THREADS: i32 = 20;
 const MAX_URL_LENGTH: u32 = 100;
 const MAX_LINK_DEEPH: u8 = 3;
 
-use super::fetch::{parse_and_fetch_all_urls, fetch_url, url_status};
+use super::fetch::{fetch_url, parse_and_fetch_all_urls, url_status};
 
 #[derive(Debug)]
 pub struct UrlData {
@@ -68,13 +68,8 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) {
         let robots_value = robots_value.to_owned();
         let filter = filter.clone();
 
-        let handler =  thread::spawn(move || {
-            crawl_worker_thread(
-                &origin,
-                to_visit,
-                &robots_value,
-                filter,
-            );
+        let handler = thread::spawn(move || {
+            crawl_worker_thread(&origin, to_visit, &robots_value, filter);
         });
         threads.push(handler);
     }
@@ -85,7 +80,6 @@ fn crawl(origin: &str, start_url: &Url, robots_value: &str) {
 }
 
 fn get_first_element(hash_map: &mut HashMap<String, UrlData>) -> UrlData {
-
     let urldata = match hash_map.values().next() {
         Some(url_data) => UrlData {
             url: url_data.url.clone(),
@@ -107,7 +101,6 @@ fn crawl_worker_thread(
     robots_value: &str,
     filter: Arc<Mutex<BloomFilter>>,
 ) {
-
     loop {
         let current: UrlData;
         {
@@ -119,15 +112,15 @@ fn crawl_worker_thread(
             current = get_first_element(&mut to_visit_val);
             println!(" Links left to check: {:?}", to_visit_val.len());
         }
-            // Check for max deeph
-            if current.deeph > MAX_LINK_DEEPH {
-                println!("  Max deeph reached: {:?}", &current);
-                continue;
-            }
+        // Check for max deeph
+        if current.deeph > MAX_LINK_DEEPH {
+            println!("  Max deeph reached: {:?}", &current);
+            continue;
+        }
         {
             // Don't visit already visited urls or too deeph
             let mut filter = filter.lock().unwrap();
-            if filter.contains(&current.url)  {
+            if filter.contains(&current.url) {
                 println!("  Already visited: {:?}", &current);
                 continue;
             } else {
@@ -140,32 +133,30 @@ fn crawl_worker_thread(
         if url_status(&origin, &current.url) == true {
             let url = build_url(&origin, &current.url).unwrap();
             let base_url = url.origin().unicode_serialization();
-            if base_url
-                .eq_ignore_ascii_case(&origin)
-            {
+            if base_url.eq_ignore_ascii_case(&origin) {
                 // Parse this URL and fetch all links
                 let new_urls = parse_and_fetch_all_urls(&url);
                 println!("  Found new Urls: {:?}", new_urls.len());
                 let mut to_visit_val = to_visit.lock().unwrap();
                 // Add all valid URLs to list of to_visit URLs
                 for new_url in new_urls {
-                        if !is_allowed_by_robots(&robots_value, &new_url) {
-                            println!("  Not allowed by robots.txt: {}", &new_url);
-                        } else if new_url.len() as u32 > MAX_URL_LENGTH {
-                            println!("  Not allowed. Url too long. {}", &new_url);
-                        } else {
-                            println!("  add to bucket {}", to_visit_val.len());
-                            // Add new URLS to list of urls to_visit
-                            to_visit_val.insert(
-                                new_url.clone(),
-                                UrlData {
-                                    url: new_url.clone(),
-                                    deeph: (current.deeph + 1),
-                                },
-                            );
-                        }
+                    if !is_allowed_by_robots(&robots_value, &new_url) {
+                        println!("  Not allowed by robots.txt: {}", &new_url);
+                    } else if new_url.len() as u32 > MAX_URL_LENGTH {
+                        println!("  Not allowed. Url too long. {}", &new_url);
+                    } else {
+                        println!("  Add to bucket {}", &to_visit_val.len());
+                        // Add new URLS to list of urls to_visit
+                        to_visit_val.insert(
+                            new_url.clone(),
+                            UrlData {
+                                url: new_url.clone(),
+                                deeph: (current.deeph + 1),
+                            },
+                        );
+                    }
                 }
-                println!("  Links left to visit: {}", to_visit_val.len());
+                println!("  All new urls added");
             } else {
                 println!("  Found no links");
             }

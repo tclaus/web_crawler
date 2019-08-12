@@ -1,3 +1,4 @@
+extern crate base64;
 extern crate html5ever;
 extern crate url;
 
@@ -31,7 +32,7 @@ fn main() {
     } else {
         println!("Scan urls from database");
         loop {
-            let urls = read_urls_to_scan(); // TODO: read urls scaned foir a longer time
+            let urls = read_urls_to_scan(); // TODO: read urls scaned for a longer time
                                             // TODO: Prepaire for very large Return values
             for url_string in &urls {
                 crawler::crawl_start_url(&url_string);

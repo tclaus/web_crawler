@@ -8,9 +8,11 @@ use serde::Serialize;
 #[elastic(index = "crawler_index")]
 #[derive(ElasticType, Serialize, Deserialize)]
 pub struct WebDocument {
-    pub title: String,
+    #[elastic(id)]
+    pub id: Keyword<DefaultKeywordMapping>,
+    pub title: Text<DefaultTextMapping>,
     pub url: String,
-    pub description: String,
+    pub description: Text<DefaultTextMapping>,
     // Tags, Plain Text of body (part of it)
 }
 

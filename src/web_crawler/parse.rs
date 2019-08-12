@@ -1,5 +1,7 @@
 use crate::es::es::WebDocument;
 use crate::es::*;
+use base64::encode;
+use elastic::prelude::*;
 use select::document::Document;
 use select::predicate::Name;
 use std::string::String;
@@ -26,10 +28,14 @@ pub fn parse_for_index(document: &Document, url: &str) {
                                                   // Keywords
                                                   // let headlines = get_head_tags(&document);
 
+    let hashed_url = md5::compute(&url.as_bytes());
+    let base64 = encode(&hashed_url.0);
+
     let web_document = WebDocument {
-        url: url.to_owned(),
-        title: title.to_owned(),
-        description: description.to_owned(),
+        id: Keyword::<DefaultKeywordMapping>::new(base64),
+        url: url.to_string(),
+        title: Text::<DefaultTextMapping>::new(title),
+        description: Text::<DefaultTextMapping>::new(description),
     };
 
     es::add_to_index(web_document);

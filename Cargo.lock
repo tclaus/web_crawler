@@ -2107,6 +2107,7 @@ dependencies = [
 name = "web_crawler"
 version = "0.1.0"
 dependencies = [
+ "base64 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bloom 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "elastic 0.21.0-pre.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "elastic_derive 0.21.0-pre.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2114,6 +2115,7 @@ dependencies = [
  "html5ever 0.24.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.10.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper-native-tls 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "md5 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "postgres 0.15.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "robots_txt 0.6.0",
  "select 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
