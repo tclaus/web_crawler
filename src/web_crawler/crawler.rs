@@ -160,6 +160,8 @@ fn crawl_worker_thread(
             } else {
                 println!("  Found no links");
             }
+        } else {
+            println!(" * Url has no valid state. {:?}", &current.url);
         }
     }
 }
