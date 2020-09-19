@@ -1,7 +1,7 @@
 extern crate bloom;
 
-use super::robots::*;
 use crate::web_crawler::fetch::build_url;
+use crate::web_crawler::robots::is_allowed_by_robots;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
