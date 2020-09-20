@@ -15,7 +15,7 @@ hyper-native-tls = "0.3.0"
 html5ever = "*"
 url = "2.1"
 postgres = "0.15.2"
-robots_txt = "0.7"
+robots_txt = { git ="https://github.com/tclaus/robots_txt.git"}
 
 bloom = "0.3.2" # Dupes finder
 
