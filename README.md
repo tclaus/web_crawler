@@ -11,7 +11,7 @@ The indexed sites can be accessed by web crawlers companion - the [Search UI](ht
 ## How to setup
 This is only valid for Mac - for those who likes windows: Good luck.
 1. Install [Rust](https://www.rust-lang.org). The site has a good documentation.
-2. Install [Postgres as an App](https://postgresapp.com) - the most easy way to get Postgres up and running on a developers machine.
+2. Install [Postgres as an App](https://postgresapp.com) - the most easy way to get Postgres up and running on a mac.
 3. Install and run [Postgres Admin](https://www.pgadmin.org)
 4. Install [Elastic Search](https://www.elastic.co/de/downloads/elasticsearch) and Kibana (optional)
 5. Start all these (Run PostgresApp, Elastic Search)
@@ -26,12 +26,13 @@ you can now run by
 ```sh
 $ cargo run https://my_seed_site.com
 ```
+A good first-start url my be https://www.t-online.de/ or any site based what you are focussed at.
 or
 ```sh
 $ cargo run
 ```
 
-In the first case only your site will be crawled. In the second case the seed database is queried, all entries are scanned and will be crawled. If any external sites are linked, these will be added to this database. So it will grow.
+In the first case only your site will be crawled. In the second case the seed database is queried, all entries are scanned and will be crawled. If any external sites are linked, these will be added to this database. So database will grow.
 
 If you have the [Search UI](https://github.com/tclaus/search_ui) installed from Github you now can open a search console on http://localhost:3000 and check your results
 

@@ -2,7 +2,7 @@ extern crate postgres;
 
 // TODO: read connection from environment (for Server use)
 // Create config file?
-// Create Seed file to cfreate databse and tables
+// Create Seed file to create databse and tables
 
 use postgres::{Connection, TlsMode};
 
