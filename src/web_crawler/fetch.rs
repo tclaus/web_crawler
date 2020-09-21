@@ -61,15 +61,17 @@ fn is_valid_path(domain: &str, path: &str) -> bool {
             return true;
         } else {
             println!(" External link");
-            let url_result: Url = Url::parse(&path).unwrap();
-            let origin_path = url_result.origin().unicode_serialization();
-            if origin_path.starts_with("http://localhost")
-                || origin_path.starts_with("https://localhost")
-            {
-                return false;
+            let parses_path : Result<url::Url, _> = Url::parse(&path);
+            if let Ok(parses_path) = parses_path {
+                let origin_path = parses_path.origin().unicode_serialization();
+                if origin_path.starts_with("http://localhost")
+                    || origin_path.starts_with("https://localhost")
+                {
+                    return false;
+                }
+                // Tore to database
+                metadata::add_new_url(&origin_path);
             }
-            // Tore to database
-            metadata::add_new_url(&origin_path);
             return false;
         }
     }
