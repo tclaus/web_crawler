@@ -16,6 +16,7 @@ use web_crawler::crawler;
 
 mod metadata;
 use metadata::read_urls_to_scan;
+use metadata::update_url;
 
 mod es;
 
@@ -26,9 +27,10 @@ fn main() {
 
     if args.len() > 1 {
         println!("Scan urls from commandline");
-        let start_url_string = &args[1];
-        println!(" Start parsing {}", &start_url_string);
-        crawler::crawl_start_url(&start_url_string);
+        let url_string = &args[1];
+        println!(" Start parsing {}", &url_string);
+        crawler::crawl_start_url(&url_string);
+        update_url(&url_string);
     } else {
         println!("Scan urls from database");
         loop {
@@ -36,6 +38,7 @@ fn main() {
                                             // TODO: Prepaire for very large Return values
             for url_string in &urls {
                 crawler::crawl_start_url(&url_string);
+                update_url(&url_string);
                 // store last visited time for this link
             }
             // wait // Loop

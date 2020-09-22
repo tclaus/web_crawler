@@ -11,10 +11,11 @@ edition = "2018"
 [dependencies]
 env_logger = "*"
 hyper = "0.10"
-hyper-native-tls = "0.3.0"
+chrono = "0.4"
+hyper-native-tls = "0.3"
 html5ever = "*"
 url = "2.1"
-postgres = "0.15.2"
+postgres = { version = "0.17", features = ["with-chrono-0_4"] }
 robots_txt = { git ="https://github.com/tclaus/robots_txt.git"}
 
 bloom = "0.3.2" # Dupes finder
