@@ -85,6 +85,8 @@ fn get_description(document: &Document) -> String {
     ) {
         return description;
     }
+    println!("Missing description!");
+    
     "".to_string() // Document has no description. Sad. Get some text from body?
 }
 
